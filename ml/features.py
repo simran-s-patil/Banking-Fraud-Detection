@@ -11,6 +11,9 @@ docstring) so it never leaks the target into itself.
 Kept in sync by hand with data_generation/config.py (duplicated rather than
 imported, to avoid a cross-package sys.path hack for five constants).
 """
+import json
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -222,6 +225,116 @@ def build_features(raw: pd.DataFrame) -> pd.DataFrame:
         + CATEGORICAL_FEATURES
     )
     return df[keep].copy()
+
+
+class MerchantRiskEncoder:
+    """Serializable, leak-free target encoder for merchant fraud risk.
+
+    Encodes MerchantID as the historical fraud rate computed exclusively on
+    the training split. During training, leave-one-out (LOO) encoding is used so
+    that a transaction's own label never informs its own feature.
+    During validation, testing, and live inference, the precomputed training-only
+    merchant mean is mapped directly without labels. Unseen merchants, missing
+    merchants, or non-merchant (P2P) rows fall back to the global training rate.
+    """
+
+    def __init__(self, fallback_rate: float | None = None):
+        self.fallback_rate: float | None = fallback_rate
+        self.global_rate_: float = fallback_rate if fallback_rate is not None else 0.0
+        self.merchant_rates_: dict[str, float] = {}
+        self.merchant_counts_: dict[str, int] = {}
+        self.merchant_sums_: dict[str, float] = {}
+        self.is_fitted_: bool = False
+
+    def fit(self, train_df: pd.DataFrame, merchant_col: str = "MerchantID", target_col: str = "IsFraud") -> "MerchantRiskEncoder":
+        if target_col not in train_df.columns:
+            raise ValueError(f"Target column '{target_col}' missing from training dataframe.")
+        valid = train_df[train_df[merchant_col].notna()]
+        self.global_rate_ = float(train_df[target_col].mean())
+        if self.fallback_rate is None:
+            self.fallback_rate = self.global_rate_
+
+        grouped = valid.groupby(merchant_col)[target_col].agg(["sum", "count"])
+        self.merchant_sums_ = {str(int(k)): float(v) for k, v in grouped["sum"].to_dict().items()}
+        self.merchant_counts_ = {str(int(k)): int(v) for k, v in grouped["count"].to_dict().items()}
+        self.merchant_rates_ = {
+            k: self.merchant_sums_[k] / self.merchant_counts_[k]
+            for k in self.merchant_sums_
+        }
+        self.is_fitted_ = True
+        return self
+
+    def transform(
+        self,
+        df: pd.DataFrame,
+        is_train: bool = False,
+        merchant_col: str = "MerchantID",
+        target_col: str = "IsFraud",
+    ) -> pd.Series:
+        if not self.is_fitted_:
+            raise RuntimeError("MerchantRiskEncoder must be fitted or loaded before transform.")
+
+        fallback = self.fallback_rate if self.fallback_rate is not None else self.global_rate_
+        rate = pd.Series(fallback, index=df.index, dtype=float)
+
+        valid_mask = df[merchant_col].notna()
+        if not valid_mask.any():
+            return rate
+
+        valid_merchants = df.loc[valid_mask, merchant_col]
+        # Format key as str(int(val)) matching the fit keys
+        m_keys = valid_merchants.astype(int).astype(str)
+
+        if is_train:
+            if target_col not in df.columns:
+                raise ValueError(f"Training transform requires '{target_col}' for leave-one-out calculation.")
+
+            m_counts = m_keys.map(self.merchant_counts_).fillna(0).to_numpy()
+            m_sums = m_keys.map(self.merchant_sums_).fillna(0.0).to_numpy()
+            y = df.loc[valid_mask, target_col].to_numpy()
+
+            denom = m_counts - 1
+            with np.errstate(divide="ignore", invalid="ignore"):
+                loo = np.where(denom > 0, (m_sums - y) / denom, fallback)
+            rate.loc[valid_mask] = loo
+        else:
+            mapped = m_keys.map(self.merchant_rates_).fillna(fallback).to_numpy()
+            rate.loc[valid_mask] = mapped
+
+        return rate
+
+    def to_dict(self) -> dict:
+        return {
+            "global_rate": self.global_rate_,
+            "fallback_rate": self.fallback_rate,
+            "merchant_rates": self.merchant_rates_,
+            "merchant_counts": self.merchant_counts_,
+            "merchant_sums": self.merchant_sums_,
+            "is_fitted": self.is_fitted_,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "MerchantRiskEncoder":
+        enc = cls(fallback_rate=data.get("fallback_rate", data.get("global_rate", 0.0)))
+        enc.global_rate_ = data.get("global_rate", 0.0)
+        enc.merchant_rates_ = data.get("merchant_rates", {})
+        enc.merchant_counts_ = data.get("merchant_counts", {})
+        enc.merchant_sums_ = data.get("merchant_sums", {})
+        enc.is_fitted_ = data.get("is_fitted", True)
+        return enc
+
+    def save(self, filepath: str | Path) -> None:
+        path = Path(filepath)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+    @classmethod
+    def load(cls, filepath: str | Path) -> "MerchantRiskEncoder":
+        path = Path(filepath)
+        with open(path, "r") as f:
+            data = json.load(f)
+        return cls.from_dict(data)
 
 
 def add_merchant_risk_rate(df: pd.DataFrame, split: pd.Series) -> pd.DataFrame:
