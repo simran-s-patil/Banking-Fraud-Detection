@@ -1,0 +1,60 @@
+{
+  "arguments": {
+    "accounts": 800,
+    "customers": 500,
+    "merchants": 60,
+    "transactions": 20000
+  },
+  "category_counts": {
+    "CNP": 7976,
+    "P2P": 12024
+  },
+  "pattern_counts": {
+    "fraud/card_testing": 72,
+    "fraud/device_geo_change": 66,
+    "fraud/fan_out": 90,
+    "fraud/high_amount": 108,
+    "fraud/merchant_anomaly": 72,
+    "fraud/odd_hour": 90,
+    "fraud/velocity_burst": 102,
+    "legit_edge/business_payouts": 150,
+    "legit_edge/festival_burst": 170,
+    "legit_edge/large_planned_purchase": 180,
+    "legit_edge/new_merchant_trial": 120,
+    "legit_edge/night_shift": 150,
+    "legit_edge/small_recurring_payments": 120,
+    "legit_edge/travel_purchase": 110,
+    "normal/normal": 18400
+  },
+  "pattern_shortfall": 0,
+  "rows": {
+    "Account": 800,
+    "Customer": 500,
+    "Fraud_Alert": 0,
+    "Investigation": 0,
+    "Merchant": 60,
+    "Transaction": 20000
+  },
+  "scenario_counts": {
+    "fraud": 600,
+    "legit_edge": 1000,
+    "normal": 18400
+  },
+  "seed": 42,
+  "sha256": {
+    "labels.csv": "e56ea7d6902d7a87f2f0e27faec2b7820fb1c428b85c05e36188d38f51152cbc",
+    "opening_balances.csv": "8ddaf02702a89f4a45dbec7eda4f80c86cc8e361c84429ef4bb80b74f59c7c1c",
+    "seed_data.sql": "af2c3f0479d831fe16504ce7be3fb624a2e4e47fa8a82db834aadf839a9b17e1",
+    "validate_seed_data.sql": "a6646db2fc78b9ac1b8ecd6977605bf8348c3ea780656cc13e87967f3374f30f"
+  },
+  "status_counts": {
+    "FAILED": 1001,
+    "PENDING": 609,
+    "REVERSED": 405,
+    "SUCCESS": 17985
+  },
+  "window": [
+    "2025-01-01",
+    "2025-12-31"
+  ]
+}

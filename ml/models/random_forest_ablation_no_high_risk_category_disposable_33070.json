@@ -1,0 +1,72 @@
+{
+  "dataset_source": "disposable_33070",
+  "db_host": "127.0.0.1 (default, retroactively noted)",
+  "db_port": "33070 (default, retroactively noted)",
+  "model_name": "random_forest",
+  "experiment_label": "ablation_no_high_risk_category",
+  "feature_columns": [
+    "amount",
+    "amount_log",
+    "amount_zscore_sender",
+    "hour_of_day",
+    "day_of_week",
+    "is_night",
+    "is_festival_day",
+    "sender_account_age_days",
+    "has_sender_history",
+    "sender_txn_count_10m",
+    "sender_txn_count_60m",
+    "sender_txn_count_1440m",
+    "sender_amount_sum_60m",
+    "is_new_receiver",
+    "sender_fanout_60m",
+    "sender_fanout_1440m",
+    "is_new_merchant_for_customer",
+    "has_device_id",
+    "has_ip_address",
+    "has_location",
+    "has_card_token",
+    "is_merchant_missing",
+    "device_changed_for_account",
+    "location_changed_for_account",
+    "has_device_history",
+    "merchant_risk_rate",
+    "sender_account_type",
+    "receiver_shape",
+    "merchant_category"
+  ],
+  "threshold": 0.19,
+  "validation_metrics": {
+    "threshold": 0.19,
+    "precision": 0.4222222222222222,
+    "recall": 0.7037037037037037,
+    "f1": 0.5277777777777778,
+    "roc_auc": 0.973446375552943,
+    "pr_auc": 0.48514673673355724,
+    "confusion_matrix": {
+      "tn": 3419,
+      "fp": 78,
+      "fn": 24,
+      "tp": 57
+    },
+    "n_positive": 81,
+    "n_total": 3578
+  },
+  "test_metrics": {
+    "threshold": 0.19,
+    "precision": 0.45454545454545453,
+    "recall": 0.7407407407407407,
+    "f1": 0.5633802816901409,
+    "roc_auc": 0.971022388948434,
+    "pr_auc": 0.6552665976215173,
+    "confusion_matrix": {
+      "tn": 3612,
+      "fp": 120,
+      "fn": 35,
+      "tp": 100
+    },
+    "n_positive": 135,
+    "n_total": 3867
+  },
+  "random_seed": 42
+}
