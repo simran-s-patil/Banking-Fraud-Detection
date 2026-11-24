@@ -26,3 +26,9 @@ Thumbs.db
 # CodeGraph & Tool caches
 .codegraph/
 *.log
+
+# Environment variables and test caches
+.env
+.env.*
+!.env.example
+.pytest_cache/
